@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DigitalKart</title>
+  <style>
+    /* ===== Base Page Styles ===== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f4f6fb;
+      color: #1f2937;
+      line-height: 1.5;
+    }
+
+    .container {
+      width: min(1000px, 92%);
+      margin: 0 auto;
+    }
+
+    /* ===== Header ===== */
+    header {
+      background: #111827;
+      color: #fff;
+      padding: 18px 0;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      letter-spacing: 0.4px;
+    }
+
+    /* ===== Navbar Buttons ===== */
+    .nav-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.08s ease, opacity 0.2s ease;
+    }
+
+    button:hover {
+      opacity: 0.92;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    #loginBtn {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    #logoutBtn {
+      background: #ef4444;
+      color: #fff;
+    }
+
+    #toggleUploadBtn {
+      background: #10b981;
+      color: #fff;
+    }
+
+    /* ===== Status Message ===== */
+    #statusMsg {
+      margin-bottom: 14px;
+      color: #374151;
+      font-size: 0.95rem;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    /* ===== Upload Card (Hidden by Default) ===== */
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+
+    #uploadSection {
+      display: none;
+    }
+
+    .field {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      color: #4b5563;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 0.95rem;
+    }
+
+    #submitProductBtn {
+      background: #111827;
+      color: #fff;
+    }
+
+    /* ===== Products Grid ===== */
+    .products-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-bottom: 24px;
+    }
+
+    .product-item {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .product-title {
+      font-size: 1rem;
+      margin-bottom: 8px;
+      color: #111827;
+    }
+
+    .product-price {
+      font-size: 0.95rem;
+      color: #0f766e;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .buy-btn {
+      background: #7c3aed;
+      color: #fff;
+      width: 100%;
+    }
+
+    .empty-note {
+      color: #6b7280;
+      font-style: italic;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <!-- ===== Header Section ===== -->
+  <header>
+    <div class="container">
+      <h1>DigitalKart</h1>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- ===== Navbar Section ===== -->
+    <div class="nav-bar">
+      <button id="loginBtn">Login</button>
+      <button id="logoutBtn">Logout</button>
+      <button id="toggleUploadBtn">Upload</button>
+    </div>
+
+    <!-- ===== User Status Section ===== -->
+    <div id="statusMsg">Not logged in.</div>
+
+    <!-- ===== Hidden Upload Section ===== -->
+    <section id="uploadSection" class="card">
+      <h2 style="margin-bottom: 12px; font-size: 1.2rem;">Upload Product</h2>
+
+      <div class="field">
+        <label for="productTitle">Product title</label>
+        <input id="productTitle" type="text" placeholder="e.g. UI Kit Bundle" />
+      </div>
+
+      <div class="field">
+        <label for="productPrice">Price</label>
+        <input id="productPrice" type="number" min="0" placeholder="e.g. 29" />
+      </div>
+
+      <button id="submitProductBtn">Submit Product</button>
+    </section>
+
+    <!-- ===== Product List Section ===== -->
+    <section class="card">
+      <h2 style="margin-bottom: 10px; font-size: 1.2rem;">Products</h2>
+      <div id="productsContainer" class="products-grid"></div>
+      <p id="emptyState" class="empty-note">Loading products...</p>
+    </section>
+  </main>
+
+  <!-- ===== Firebase + App Logic ===== -->
+  <script type="module">
+    // ============================================
+    // 1) Firebase v10 Imports
+    // ============================================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      getDocs,
+      query,
+      orderBy,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+    // ============================================
+    // 2) Firebase Config (Replace placeholders)
+    // ============================================
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID"
+    };
+
+    // ============================================
+    // 3) Initialize Firebase Services
+    // ============================================
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    // ============================================
+    // 4) Global State
+    // ============================================
+    let currentUser = null;
+
+    // ============================================
+    // 5) UI Element References
+    // ============================================
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const toggleUploadBtn = document.getElementById("toggleUploadBtn");
+    const submitProductBtn = document.getElementById("submitProductBtn");
+
+    const statusMsg = document.getElementById("statusMsg");
+    const uploadSection = document.getElementById("uploadSection");
+
+    const productTitleInput = document.getElementById("productTitle");
+    const productPriceInput = document.getElementById("productPrice");
+
+    const productsContainer = document.getElementById("productsContainer");
+    const emptyState = document.getElementById("emptyState");
+
+    // ============================================
+    // 6) Auth: Login / Logout Handlers
+    // ============================================
+    loginBtn.addEventListener("click", async () => {
+      try {
+        await signInWithPopup(auth, provider);
+        alert("Login successful");
+      } catch (error) {
+        alert("Login failed: " + error.message);
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        alert("Logged out");
+      } catch (error) {
+        alert("Logout failed: " + error.message);
+      }
+    });
+
+    // ============================================
+    // 7) Track Current Logged-in User
+    // ============================================
+    onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+
+      if (currentUser) {
+        statusMsg.textContent = `Logged in as: ${currentUser.email}`;
+      } else {
+        statusMsg.textContent = "Not logged in.";
+      }
+    });
+
+    // ============================================
+    // 8) Toggle Upload Section (Auth Protected)
+    // ============================================
+    toggleUploadBtn.addEventListener("click", () => {
+      if (!currentUser) {
+        alert("Login required");
+        return;
+      }
+
+      const isHidden = uploadSection.style.display === "none" || uploadSection.style.display === "";
+      uploadSection.style.display = isHidden ? "block" : "none";
+    });
+
+    // ============================================
+    // 9) Upload Product to Firestore
+    // ============================================
+    submitProductBtn.addEventListener("click", async () => {
+      if (!currentUser) {
+        alert("Login required");
+        return;
+      }
+
+      const title = productTitleInput.value.trim();
+      const price = Number(productPriceInput.value);
+
+      if (!title) {
+        alert("Please enter a product title");
+        return;
+      }
+
+      if (Number.isNaN(price) || price < 0) {
+        alert("Please enter a valid price");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "products"), {
+          title,
+          price,
+          userEmail: currentUser.email,
+          status: "approved",
+          createdAt: serverTimestamp()
+        });
+
+        alert("Product uploaded successfully");
+
+        productTitleInput.value = "";
+        productPriceInput.value = "";
+        uploadSection.style.display = "none";
+
+        await loadProducts();
+      } catch (error) {
+        alert("Upload failed: " + error.message);
+      }
+    });
+
+    // ============================================
+    // 10) Load Products from Firestore
+    // ============================================
+    async function loadProducts() {
+      productsContainer.innerHTML = "";
+      emptyState.textContent = "Loading products...";
+
+      try {
+        const productsRef = collection(db, "products");
+        const productsQuery = query(productsRef, orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(productsQuery);
+
+        if (snapshot.empty) {
+          emptyState.textContent = "No products yet. Be the first to upload!";
+          return;
+        }
+
+        emptyState.textContent = "";
+
+        snapshot.forEach((docSnap) => {
+          const product = docSnap.data();
+
+          const card = document.createElement("div");
+          card.className = "product-item";
+
+          const titleEl = document.createElement("h3");
+          titleEl.className = "product-title";
+          titleEl.textContent = product.title || "Untitled Product";
+
+          const priceEl = document.createElement("p");
+          priceEl.className = "product-price";
+          priceEl.textContent = `Price: $${product.price ?? 0}`;
+
+          const buyBtn = document.createElement("button");
+          buyBtn.className = "buy-btn";
+          buyBtn.textContent = "Buy";
+          buyBtn.addEventListener("click", () => {
+            if (!currentUser) {
+              alert("Login required");
+              return;
+            }
+            alert("Payment coming soon");
+          });
+
+          card.appendChild(titleEl);
+          card.appendChild(priceEl);
+          card.appendChild(buyBtn);
+
+          productsContainer.appendChild(card);
+        });
+      } catch (error) {
+        emptyState.textContent = "Could not load products. Check Firebase setup.";
+        console.error("Load products error:", error);
+      }
+    }
+
+    // ============================================
+    // 11) Initial Product Load
+    // ============================================
+    loadProducts();
+  </script>
+</body>
+</html>
